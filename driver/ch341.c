@@ -769,7 +769,7 @@ static int ch341_tty_write(struct tty_struct *tty,
 	return count;
 }
 
-static int ch341_tty_write_room(struct tty_struct *tty)
+static unsigned int ch341_tty_write_room(struct tty_struct *tty)
 {
 	struct ch341 *ch341 = tty->driver_data;
 	/*
@@ -779,7 +779,7 @@ static int ch341_tty_write_room(struct tty_struct *tty)
 	return ch341_wb_is_avail(ch341) ? ch341->writesize : 0;
 }
 
-static int ch341_tty_chars_in_buffer(struct tty_struct *tty)
+static unsigned int ch341_tty_chars_in_buffer(struct tty_struct *tty)
 {
 	struct ch341 *ch341 = tty->driver_data;
 	/*
@@ -1620,7 +1620,7 @@ static const struct tty_operations ch341_ops = {
 static int __init ch341_init(void)
 {
 	int retval;
-	ch341_tty_driver = alloc_tty_driver(CH341_TTY_MINORS);
+	ch341_tty_driver = tty_alloc_driver(CH341_TTY_MINORS, 0);
 	if (!ch341_tty_driver)
 		return -ENOMEM;
 	ch341_tty_driver->driver_name = "ch341_uart",
@@ -1637,14 +1637,14 @@ static int __init ch341_init(void)
 
 	retval = tty_register_driver(ch341_tty_driver);
 	if (retval) {
-		put_tty_driver(ch341_tty_driver);
+		tty_driver_kref_put(ch341_tty_driver);
 		return retval;
 	}
 
 	retval = usb_register(&ch341_driver);
 	if (retval) {
 		tty_unregister_driver(ch341_tty_driver);
-		put_tty_driver(ch341_tty_driver);
+		tty_driver_kref_put(ch341_tty_driver);
 		return retval;
 	}
 
@@ -1658,7 +1658,7 @@ static void __exit ch341_exit(void)
 {
 	usb_deregister(&ch341_driver);
 	tty_unregister_driver(ch341_tty_driver);
-	put_tty_driver(ch341_tty_driver);
+	tty_driver_kref_put(ch341_tty_driver);
 	idr_destroy(&ch341_minors);
 	printk(KERN_INFO KBUILD_MODNAME ": " "ch341 driver exit.\n");
 }
